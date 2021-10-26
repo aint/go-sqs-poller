@@ -68,13 +68,13 @@ type Config struct {
 }
 
 // New sets up a new Worker
-func New(client QueueAPI, config *Config) *Worker {
+func New(client QueueAPI, config *Config, logger LoggerIFace) *Worker {
 	config.populateDefaultValues()
 	config.QueueURL = getQueueURL(client, config.QueueName)
 
 	return &Worker{
 		Config:    config,
-		Log:       &logger{},
+		Log:       logger,
 		SqsClient: client,
 	}
 }
