@@ -131,5 +131,8 @@ func buildClientParams() *sqs.ReceiveMessageInput {
 		MaxNumberOfMessages: aws.Int64(maxNumberOfMessages),
 		AttributeNames:      []*string{aws.String("All")},
 		WaitTimeSeconds:     aws.Int64(waitTimeSecond),
+		MessageAttributeNames: []*string{
+			aws.String(sqs.QueueAttributeNameAll),
+		},
 	}
 }

@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
-
+	"github.com/Sef1995/go-sqs-poller/worker"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/h2ik/go-sqs-poller/v3/worker"
+	"os"
 )
 
 func main() {
