@@ -12,17 +12,17 @@ type LoggerIFace interface {
 	Error(i ...interface{})
 }
 
-type logger struct {
+type Logger struct {
 }
 
-func (l *logger) Debug(i ...interface{}) {
+func (l *Logger) Debug(i ...interface{}) {
 	log.Printf("[DEBUG] %s", fmt.Sprintln(i...))
 }
 
-func (l *logger) Info(i ...interface{}) {
+func (l *Logger) Info(i ...interface{}) {
 	log.Printf("[INFO] %s", fmt.Sprintln(i...))
 }
 
-func (l *logger) Error(i ...interface{}) {
+func (l *Logger) Error(i ...interface{}) {
 	log.Printf("[ERROR] %s", fmt.Sprintln(i...))
 }

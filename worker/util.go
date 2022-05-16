@@ -1,19 +1,14 @@
 package worker
 
 import (
-	"fmt"
-
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
 // CreateSqsClient creates a client for SQS API
-func CreateSqsClient(awsConfigs ...*aws.Config) sqsiface.SQSAPI {
-	awsSession := session.Must(session.NewSession())
-
-	return sqs.New(awsSession, awsConfigs...)
+func CreateSqsClient(awsConfig aws.Config) SqsConsumeApi {
+	return sqs.NewFromConfig(awsConfig)
 }
 
 func (config *Config) populateDefaultValues() {
@@ -26,16 +21,15 @@ func (config *Config) populateDefaultValues() {
 	}
 }
 
-func getQueueURL(client QueueAPI, queueName string) (queueURL string) {
-	params := &sqs.GetQueueUrlInput{
-		QueueName: aws.String(queueName), // Required
+func getQueueURL(client SqsConsumeApi, queueName *string) (*string, error) {
+	getQueueInput := &sqs.GetQueueUrlInput{
+		QueueName: queueName,
 	}
-	response, err := client.GetQueueUrl(params)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	queueURL = aws.StringValue(response.QueueUrl)
 
-	return
+	queueOutput, err := client.GetQueueUrl(context.Background(), getQueueInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return queueOutput.QueueUrl, nil
 }

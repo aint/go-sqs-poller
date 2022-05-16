@@ -3,30 +3,30 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/Sef1995/go-sqs-poller/worker"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"os"
+	"github.com/aint/go-sqs-poller/worker"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
 
 func main() {
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(os.Getenv("AWS_ACCESS_KEY"), os.Getenv("AWS_SECRET_KEY"), ""),
-		Region:      aws.String(os.Getenv("AWS_REGION")),
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion("us-east-1"))
+	if err != nil {
+		panic(err)
 	}
-	sqsClient := worker.CreateSqsClient(awsConfig)
+
+	sqsClient := worker.CreateSqsClient(cfg)
 	workerConfig := &worker.Config{
-		QueueName:          "my-sqs-queue",
+		QueueName:          aws.String("dev-notifications-sender-v2"), //my-sqs-queue
 		MaxNumberOfMessage: 10,
 		WaitTimeSecond:     5,
 	}
-	eventWorker := worker.New(sqsClient, workerConfig)
+	eventWorker := worker.New(sqsClient, workerConfig, &worker.Logger{})
 	ctx := context.Background()
 
 	// start the worker
-	eventWorker.Start(ctx, worker.HandlerFunc(func(msg *sqs.Message) error {
-		fmt.Println(aws.StringValue(msg.Body))
+	eventWorker.Start(ctx, worker.HandlerFunc(func(msg types.Message) error {
+		fmt.Println(aws.ToString(msg.Body))
 		return nil
 	}))
 }
