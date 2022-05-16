@@ -1,4 +1,4 @@
-module github.com/Sef1995/go-sqs-poller
+module github.com/aint/go-sqs-poller
 
 require (
 	github.com/aws/aws-sdk-go v1.6.18
