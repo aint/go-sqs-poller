@@ -1,7 +1,18 @@
 # go-sqs-poller
 
-GoLang SQS Queue Poller using the AWS SDK
+[![Go Report Card](https://goreportcard.com/badge/github.com/aint/go-sqs-poller)](https://goreportcard.com/report/github.com/aint/go-sqs-poller)
 
-This is based off of [golang-sqs-worker-example](https://github.com/nabeken/golang-sqs-worker-example) but it uses the [official AWS golang SDK](https://github.com/aws/aws-sdk-go).
+GoLang SQS Queue Poller using the AWS SDK V2
+
+This is fork of [h2ik/go-sqs-poller](https://github.com/h2ik/go-sqs-poller) with the following changes:
+- [x] use [AWS golang SDK V2](https://github.com/aws/aws-sdk-go)
+- [x] include message user attributes [`MessageAttributeNames`]
+- [x] improved logging (deleted `log.Println`, only informative debug and error logging)
+- [ ] option to disable error logging of a handler function
+- [ ] redesign errors
+- [ ] ability to change a visibility timeout
+- [ ] update project structure
+- [ ] example wih a worker pool
+- [ ] check compatability with logrus and zap loggers
 
 Check out the [cmd/example-worker/main.go](cmd/example-worker/main.go) for an example of how to use the worker.
