@@ -9,6 +9,7 @@ import (
 type LoggerIFace interface {
 	Debug(i ...interface{})
 	Info(i ...interface{})
+	Warn(i ...interface{})
 	Error(i ...interface{})
 }
 
@@ -21,6 +22,10 @@ func (l *Logger) Debug(i ...interface{}) {
 
 func (l *Logger) Info(i ...interface{}) {
 	log.Printf("[INFO] %s", fmt.Sprintln(i...))
+}
+
+func (l *Logger) Warn(i ...interface{}) {
+	log.Printf("[WARN] %s", fmt.Sprintln(i...))
 }
 
 func (l *Logger) Error(i ...interface{}) {

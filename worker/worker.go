@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
-	"log"
 	"sync"
 )
 
@@ -89,10 +88,10 @@ func (worker *Worker) Start(ctx context.Context, h Handler) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("worker: Stopping polling because a context kill signal was sent")
+			worker.Log.Debug("worker: stopping polling because a context kill signal was sent")
 			return
 		default:
-			worker.Log.Debug("worker: Start Polling")
+			worker.Log.Debug("worker: start polling")
 
 			params := &sqs.ReceiveMessageInput{
 				QueueUrl:            worker.Config.QueueURL, // Required
@@ -108,7 +107,7 @@ func (worker *Worker) Start(ctx context.Context, h Handler) {
 
 			resp, err := worker.SqsClient.ReceiveMessage(ctx, params)
 			if err != nil {
-				log.Println(err)
+				worker.Log.Warn(fmt.Sprintf("worker: receive message error: %s", err.Error()))
 				continue
 			}
 			if len(resp.Messages) > 0 {
@@ -121,7 +120,7 @@ func (worker *Worker) Start(ctx context.Context, h Handler) {
 // poll launches goroutine per received message and wait for all message to be processed
 func (worker *Worker) run(ctx context.Context, h Handler, messages []types.Message) {
 	numMessages := len(messages)
-	worker.Log.Info(fmt.Sprintf("worker: Received %d messages", numMessages))
+	worker.Log.Debug(fmt.Sprintf("worker: received %d messages", numMessages))
 
 	var wg sync.WaitGroup
 	wg.Add(numMessages)
