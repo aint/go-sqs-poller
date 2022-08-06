@@ -69,11 +69,13 @@ type Config struct {
 // New sets up a new Worker
 func New(client SqsConsumeApi, config *Config, logger LoggerIFace) *Worker {
 	config.populateDefaultValues()
-	queueURL, err := getQueueURL(client, config.QueueName)
-	if err != nil {
-		panic(err)
+	if config.QueueURL == nil {
+		queueURL, err := getQueueURL(client, config.QueueName)
+		if err != nil {
+			panic(err)
+		}
+		config.QueueURL = queueURL
 	}
-	config.QueueURL = queueURL
 
 	return &Worker{
 		Config:    config,
