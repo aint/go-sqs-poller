@@ -25,8 +25,8 @@ func main() {
 	ctx := context.Background()
 
 	// start the worker
-	eventWorker.Start(ctx, worker.HandlerFunc(func(msg types.Message) error {
+	eventWorker.Start(ctx, func(msg types.Message) error {
 		fmt.Println(aws.ToString(msg.Body))
 		return nil
-	}))
+	})
 }

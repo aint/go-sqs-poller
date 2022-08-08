@@ -11,16 +11,6 @@ import (
 // HandlerFunc is used to define the Handler that is run on for each message
 type HandlerFunc func(msg types.Message) error
 
-// HandleMessage wraps a function for handling sqs messages
-func (f HandlerFunc) HandleMessage(msg types.Message) error {
-	return f(msg)
-}
-
-// Handler interface
-type Handler interface {
-	HandleMessage(msg types.Message) error
-}
-
 // InvalidEventError struct
 type InvalidEventError struct {
 	event string
@@ -84,7 +74,7 @@ func New(client SqsConsumeApi, config *Config, logger LoggerIFace) *Worker {
 }
 
 // Start starts the polling and will continue polling till the application is forcibly stopped
-func (worker *Worker) Start(ctx context.Context, h Handler) {
+func (worker *Worker) Start(ctx context.Context, fn HandlerFunc) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -111,14 +101,14 @@ func (worker *Worker) Start(ctx context.Context, h Handler) {
 				continue
 			}
 			if len(resp.Messages) > 0 {
-				worker.run(ctx, h, resp.Messages)
+				worker.run(ctx, fn, resp.Messages)
 			}
 		}
 	}
 }
 
 // poll launches goroutine per received message and wait for all message to be processed
-func (worker *Worker) run(ctx context.Context, h Handler, messages []types.Message) {
+func (worker *Worker) run(ctx context.Context, fn HandlerFunc, messages []types.Message) {
 	numMessages := len(messages)
 	worker.Log.Debug(fmt.Sprintf("worker: received %d messages", numMessages))
 
@@ -128,7 +118,7 @@ func (worker *Worker) run(ctx context.Context, h Handler, messages []types.Messa
 		go func(m types.Message) {
 			// launch goroutine
 			defer wg.Done()
-			if err := worker.handleMessage(ctx, m, h); err != nil {
+			if err := worker.handleMessage(ctx, m, fn); err != nil {
 				worker.Log.Error(err.Error())
 			}
 		}(messages[i])
@@ -137,9 +127,9 @@ func (worker *Worker) run(ctx context.Context, h Handler, messages []types.Messa
 	wg.Wait()
 }
 
-func (worker *Worker) handleMessage(ctx context.Context, m types.Message, h Handler) error {
+func (worker *Worker) handleMessage(ctx context.Context, m types.Message, fn HandlerFunc) error {
 	var err error
-	err = h.HandleMessage(m)
+	err = fn(m)
 	if _, ok := err.(InvalidEventError); ok {
 		worker.Log.Error(err.Error())
 	} else if err != nil {

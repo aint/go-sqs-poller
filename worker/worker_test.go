@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -40,14 +39,6 @@ func (c *mockedSqsClient) DeleteMessage(_ context.Context, params *sqs.DeleteMes
 	return &sqs.DeleteMessageOutput{}, nil
 }
 
-type mockedHandler struct {
-	mock.Mock
-}
-
-func (mh *mockedHandler) HandleMessage(foo string, qux string) {
-	mh.Called(foo, qux)
-}
-
 type sqsEvent struct {
 	Foo string `json:"foo"`
 	Qux string `json:"qux"`
@@ -76,16 +67,7 @@ func TestStart(t *testing.T) {
 	ctx, cancel := contextAndCancel()
 	defer cancel()
 
-	handler := new(mockedHandler)
-	handlerFunc := HandlerFunc(func(msg types.Message) (err error) {
-		event := &sqsEvent{}
-
-		json.Unmarshal([]byte(aws.ToString(msg.Body)), event)
-
-		handler.HandleMessage(event.Foo, event.Qux)
-
-		return
-	})
+	handlerFunc := HandlerFunc(func(msg types.Message) error { return nil })
 
 	t.Run("the worker has correct configuration", func(t *testing.T) {
 		assert.Equal(t, worker.Config.QueueName, aws.String("my-sqs-queue"), "QueueName has been set properly")
@@ -109,12 +91,10 @@ func TestStart(t *testing.T) {
 	t.Run("the worker successfully processes a message", func(t *testing.T) {
 		client.On("ReceiveMessage", clientParams).Return()
 		client.On("DeleteMessage", deleteInput).Return()
-		handler.On("HandleMessage", "bar", "baz").Return().Once()
 
 		worker.Start(ctx, handlerFunc)
 
 		client.AssertExpectations(t)
-		handler.AssertExpectations(t)
 	})
 }
 
