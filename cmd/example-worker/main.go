@@ -25,8 +25,8 @@ func main() {
 	ctx := context.Background()
 
 	// start the worker
-	eventWorker.Start(ctx, func(msg types.Message) error {
+	eventWorker.Start(ctx, func(msg types.Message) worker.HandlerFuncResponse {
 		fmt.Println(aws.ToString(msg.Body))
-		return nil
+		return worker.HandlerFuncResponse{Status: worker.ChangeMessageVisibility, VisibilityTimeout: aws.Int32(120)}
 	})
 }

@@ -39,11 +39,6 @@ func (c *mockedSqsClient) DeleteMessage(_ context.Context, params *sqs.DeleteMes
 	return &sqs.DeleteMessageOutput{}, nil
 }
 
-type sqsEvent struct {
-	Foo string `json:"foo"`
-	Qux string `json:"qux"`
-}
-
 const maxNumberOfMessages = int32(1984)
 const waitTimeSecond = int32(1337)
 
@@ -67,7 +62,9 @@ func TestStart(t *testing.T) {
 	ctx, cancel := contextAndCancel()
 	defer cancel()
 
-	handlerFunc := HandlerFunc(func(msg types.Message) error { return nil })
+	handlerFunc := HandlerFunc(func(msg types.Message) HandlerFuncResponse {
+		return HandlerFuncResponse{Status: DeleteMessage}
+	})
 
 	t.Run("the worker has correct configuration", func(t *testing.T) {
 		assert.Equal(t, worker.Config.QueueName, aws.String("my-sqs-queue"), "QueueName has been set properly")

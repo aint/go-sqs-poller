@@ -8,23 +8,19 @@ import (
 	"sync"
 )
 
+type ResponseStatus string
+
+const (
+	KeepMessage             ResponseStatus = "KeepMessage"
+	DeleteMessage           ResponseStatus = "DeleteMessage"
+)
+
+type HandlerFuncResponse struct {
+	Status            ResponseStatus
+}
+
 // HandlerFunc is used to define the Handler that is run on for each message
-type HandlerFunc func(msg types.Message) error
-
-// InvalidEventError struct
-type InvalidEventError struct {
-	event string
-	msg   string
-}
-
-func (e InvalidEventError) Error() string {
-	return fmt.Sprintf("[Invalid Event: %s] %s", e.event, e.msg)
-}
-
-// NewInvalidEventError creates InvalidEventError struct
-func NewInvalidEventError(event, msg string) InvalidEventError {
-	return InvalidEventError{event: event, msg: msg}
-}
+type HandlerFunc func(msg types.Message) HandlerFuncResponse
 
 type SqsConsumeApi interface {
 	GetQueueUrl(ctx context.Context,
@@ -118,33 +114,35 @@ func (worker *Worker) run(ctx context.Context, fn HandlerFunc, messages []types.
 		go func(m types.Message) {
 			// launch goroutine
 			defer wg.Done()
-			if err := worker.handleMessage(ctx, m, fn); err != nil {
-				worker.Log.Error(err.Error())
-			}
+			worker.handleMessage(ctx, m, fn)
 		}(messages[i])
 	}
 
 	wg.Wait()
 }
 
-func (worker *Worker) handleMessage(ctx context.Context, m types.Message, fn HandlerFunc) error {
-	var err error
-	err = fn(m)
-	if _, ok := err.(InvalidEventError); ok {
-		worker.Log.Error(err.Error())
-	} else if err != nil {
-		return err
+func (worker *Worker) handleMessage(ctx context.Context, m types.Message, fn HandlerFunc) {
+	switch resp := fn(m); resp.Status {
+	case DeleteMessage:
+		worker.deleteMessage(ctx, m)
+	case KeepMessage:
+		worker.Log.Debug(fmt.Sprintf("worker: keep message in queue: %s", *m.MessageId))
+	default:
+		worker.Log.Debug(fmt.Sprintf("worker: unknown handler function response status: %s", resp.Status))
 	}
+}
 
+func (worker *Worker) deleteMessage(ctx context.Context, m types.Message) {
 	params := &sqs.DeleteMessageInput{
-		QueueUrl:      worker.Config.QueueURL, // Required
-		ReceiptHandle: m.ReceiptHandle,        // Required
+		QueueUrl:      worker.Config.QueueURL,
+		ReceiptHandle: m.ReceiptHandle,
 	}
-	_, err = worker.SqsClient.DeleteMessage(ctx, params)
-	if err != nil {
-		return err
-	}
-	worker.Log.Debug(fmt.Sprintf("worker: deleted message from queue: %s", *m.ReceiptHandle))
 
-	return nil
+	_, err := worker.SqsClient.DeleteMessage(ctx, params)
+	if err != nil {
+		worker.Log.Error(fmt.Sprintf("worker: message id %s delete error: %s", *m.MessageId, err.Error()))
+		return
+	}
+
+	worker.Log.Debug(fmt.Sprintf("worker: deleted message from queue: %s", *m.ReceiptHandle))
 }
