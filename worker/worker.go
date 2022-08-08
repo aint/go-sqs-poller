@@ -13,10 +13,12 @@ type ResponseStatus string
 const (
 	KeepMessage             ResponseStatus = "KeepMessage"
 	DeleteMessage           ResponseStatus = "DeleteMessage"
+	ChangeMessageVisibility ResponseStatus = "ChangeMessageVisibility"
 )
 
 type HandlerFuncResponse struct {
 	Status            ResponseStatus
+	VisibilityTimeout *int32
 }
 
 // HandlerFunc is used to define the Handler that is run on for each message
@@ -34,6 +36,10 @@ type SqsConsumeApi interface {
 	DeleteMessage(ctx context.Context,
 		params *sqs.DeleteMessageInput,
 		optFns ...func(*sqs.Options)) (*sqs.DeleteMessageOutput, error)
+
+	ChangeMessageVisibility(ctx context.Context,
+		params *sqs.ChangeMessageVisibilityInput,
+		optFns ...func(*sqs.Options)) (*sqs.ChangeMessageVisibilityOutput, error)
 }
 
 // Worker struct
@@ -125,11 +131,29 @@ func (worker *Worker) handleMessage(ctx context.Context, m types.Message, fn Han
 	switch resp := fn(m); resp.Status {
 	case DeleteMessage:
 		worker.deleteMessage(ctx, m)
+	case ChangeMessageVisibility:
+		worker.changeMessageVisibility(ctx, m, *resp.VisibilityTimeout)
 	case KeepMessage:
 		worker.Log.Debug(fmt.Sprintf("worker: keep message in queue: %s", *m.MessageId))
 	default:
 		worker.Log.Debug(fmt.Sprintf("worker: unknown handler function response status: %s", resp.Status))
 	}
+}
+
+func (worker *Worker) changeMessageVisibility(ctx context.Context, m types.Message, visibility int32) {
+	params := &sqs.ChangeMessageVisibilityInput{
+		QueueUrl:          worker.Config.QueueURL,
+		ReceiptHandle:     m.ReceiptHandle,
+		VisibilityTimeout: visibility,
+	}
+
+	_, err := worker.SqsClient.ChangeMessageVisibility(ctx, params)
+	if err != nil {
+		worker.Log.Error(fmt.Sprintf("worker: message id %s change visibility error: %s", *m.MessageId, err.Error()))
+		return
+	}
+
+	worker.Log.Debug(fmt.Sprintf("worker: changed message visibility: %s", *m.ReceiptHandle))
 }
 
 func (worker *Worker) deleteMessage(ctx context.Context, m types.Message) {
